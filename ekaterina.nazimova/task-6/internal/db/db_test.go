@@ -1,11 +1,10 @@
-package db_test
+package db //nolint:testpackage // Отключаем проверку пакета, чтобы видеть приватные поля для 100% покрытия
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/UwUshkin/task-6/internal/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +21,7 @@ func TestGetNames(t *testing.T) {
 	require.NoError(t, err)
 	defer dbConn.Close()
 
-	service := db.New(dbConn)
+	service := New(dbConn)
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
@@ -67,7 +66,7 @@ func TestGetUniqueNames(t *testing.T) {
 	require.NoError(t, err)
 	defer dbConn.Close()
 
-	service := db.New(dbConn)
+	service := New(dbConn)
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
