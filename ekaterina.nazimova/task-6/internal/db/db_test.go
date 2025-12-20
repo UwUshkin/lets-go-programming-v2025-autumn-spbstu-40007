@@ -2,29 +2,19 @@ package db
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	dbConn, _, _ := sqlmock.New()
-	defer dbConn.Close()
-	service := New(dbConn)
-	require.NotNil(t, service)
-
-	val := reflect.ValueOf(service)
-	if val.Kind() == reflect.Struct {
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Field(i)
-			if field.Type().String() == "*sql.DB" {
-				assert.Equal(t, dbConn, field.Interface())
-			}
-		}
-	}
+	mockDB, _, _ := sqlmock.New()
+	defer mockDB.Close()
+	service := New(mockDB)
+	
+	assert.NotNil(t, service)
+	assert.Equal(t, mockDB, service.DB)
 }
 
 func TestDBService_GetNames(t *testing.T) {
