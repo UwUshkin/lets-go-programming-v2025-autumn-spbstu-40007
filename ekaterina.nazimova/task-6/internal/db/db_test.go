@@ -9,12 +9,12 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	mockDB, _, _ := sqlmock.New()
-	defer mockDB.Close()
-	service := New(mockDB)
-	
+	t.Parallel()
+	dbConn, _, _ := sqlmock.New()
+	defer dbConn.Close()
+	service := New(dbConn)
 	assert.NotNil(t, service)
-	assert.Equal(t, mockDB, service.DB)
+	assert.Equal(t, dbConn, service.DB)
 }
 
 func TestDBService_GetNames(t *testing.T) {
