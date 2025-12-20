@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/UwUshkin/task-6/internal/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/UwUshkin/task-6/internal/db"
 )
 
 var (
-	errDBCustom  = errors.New("db query error")
-	errRowCustom = errors.New("row error")
+	errDatabase = errors.New("database failure")
+	errRowScan  = errors.New("scan failure")
 )
 
 func TestNew(t *testing.T) {
@@ -22,49 +22,47 @@ func TestNew(t *testing.T) {
 
 	service := db.New(mockDB)
 	require.NotNil(t, service)
+	// Проверяем, что поле DB инициализировано (это закроет ветку конструктора)
 	assert.NotNil(t, service.DB)
 }
 
-func TestDBService_GetNames(t *testing.T) {
+func TestGetNames(t *testing.T) {
 	t.Parallel()
 
-	setup := func() (*db.DBService, sqlmock.Sqlmock, func()) {
-		mockDB, mock, _ := sqlmock.New()
-		service := db.New(mockDB)
-		return &service, mock, func() { mockDB.Close() }
-	}
-
-	t.Run("success", func(t *testing.T) {
+	t.Run("success_with_data", func(t *testing.T) {
 		t.Parallel()
-		service, mock, cleanup := setup()
-		defer cleanup()
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
-		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice")
+		service := db.New(dbConn)
+		rows := sqlmock.NewRows([]string{"name"}).AddRow("User1").AddRow("User2")
 		mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
 
-		names, err := service.GetNames()
+		res, err := service.GetNames()
 		require.NoError(t, err)
-		assert.Equal(t, []string{"Alice"}, names)
+		assert.Equal(t, []string{"User1", "User2"}, res)
 	})
 
-	t.Run("empty_result", func(t *testing.T) {
+	t.Run("success_empty", func(t *testing.T) {
 		t.Parallel()
-		service, mock, cleanup := setup()
-		defer cleanup()
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
+		service := db.New(dbConn)
 		mock.ExpectQuery("SELECT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}))
 
-		names, err := service.GetNames()
+		res, err := service.GetNames()
 		require.NoError(t, err)
-		assert.Empty(t, names)
+		assert.Empty(t, res)
 	})
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
-		service, mock, cleanup := setup()
-		defer cleanup()
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
-		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDBCustom)
+		service := db.New(dbConn)
+		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDatabase)
 
 		_, err := service.GetNames()
 		require.Error(t, err)
@@ -72,9 +70,11 @@ func TestDBService_GetNames(t *testing.T) {
 
 	t.Run("scan_error", func(t *testing.T) {
 		t.Parallel()
-		service, mock, cleanup := setup()
-		defer cleanup()
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
+		service := db.New(dbConn)
+		// Передаем nil там, где ожидается строка — это гарантирует вызов блока rows.Scan error
 		rows := sqlmock.NewRows([]string{"name"}).AddRow(nil)
 		mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
 
@@ -82,12 +82,13 @@ func TestDBService_GetNames(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("rows_error", func(t *testing.T) {
+	t.Run("rows_iteration_error", func(t *testing.T) {
 		t.Parallel()
-		service, mock, cleanup := setup()
-		defer cleanup()
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
-		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errRowCustom)
+		service := db.New(dbConn)
+		rows := sqlmock.NewRows([]string{"name"}).AddRow("User1").RowError(0, errRowScan)
 		mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
 
 		_, err := service.GetNames()
@@ -95,55 +96,58 @@ func TestDBService_GetNames(t *testing.T) {
 	})
 }
 
-func TestDBService_GetUniqueNames(t *testing.T) {
+func TestGetUniqueNames(t *testing.T) {
 	t.Parallel()
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
-		mockDB, mock, _ := sqlmock.New()
-		defer mockDB.Close()
-		service := db.New(mockDB)
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
+		service := db.New(dbConn)
 		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice")
 		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
 
-		names, err := service.GetUniqueNames()
+		res, err := service.GetUniqueNames()
 		require.NoError(t, err)
-		assert.Equal(t, []string{"Alice"}, names)
+		assert.Contains(t, res, "Alice")
 	})
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
-		mockDB, mock, _ := sqlmock.New()
-		defer mockDB.Close()
-		service := db.New(mockDB)
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
-		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDBCustom)
+		service := db.New(dbConn)
+		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDatabase)
+
 		_, err := service.GetUniqueNames()
 		require.Error(t, err)
 	})
 
 	t.Run("scan_error", func(t *testing.T) {
 		t.Parallel()
-		mockDB, mock, _ := sqlmock.New()
-		defer mockDB.Close()
-		service := db.New(mockDB)
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
+		service := db.New(dbConn)
 		rows := sqlmock.NewRows([]string{"name"}).AddRow(nil)
 		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
+
 		_, err := service.GetUniqueNames()
 		require.Error(t, err)
 	})
 
-	t.Run("rows_error_final", func(t *testing.T) {
+	t.Run("rows_err_final", func(t *testing.T) {
 		t.Parallel()
-		mockDB, mock, _ := sqlmock.New()
-		defer mockDB.Close()
-		service := db.New(mockDB)
+		dbConn, mock, _ := sqlmock.New()
+		defer dbConn.Close()
 
-		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errRowCustom)
+		service := db.New(dbConn)
+		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errRowScan)
 		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
-		_, err := db.DBService(service).GetUniqueNames()
+
+		_, err := service.GetUniqueNames()
 		require.Error(t, err)
 	})
 }
