@@ -1,60 +1,92 @@
 package db
 
 import (
-	"errors"
-	"testing"
+  "errors"
+  "testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
+  "github.com/DATA-DOG/go-sqlmock"
+  "github.com/stretchr/testify/assert"
 )
 
-func TestNew(t *testing.T) {
-	t.Parallel()
-	dbConn, _, _ := sqlmock.New()
-	defer dbConn.Close()
-	service := New(dbConn)
-	assert.NotNil(t, service)
-	assert.Equal(t, dbConn, service.DB)
+func TestGetNames(t *testing.T) {
+  db, mock, err := sqlmock.New()
+  assert.NoError(t, err)
+  defer db.Close()
+
+  service := New(db)
+
+  t.Run("success", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").AddRow("Bob")
+    mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
+
+    names, err := service.GetNames()
+    assert.NoError(t, err)
+    assert.Equal(t, []string{"Alice", "Bob"}, names)
+  })
+
+  t.Run("query_error", func(t *testing.T) {
+    mock.ExpectQuery("SELECT name FROM users").WillReturnError(errors.New("db error"))
+
+    _, err := service.GetNames()
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "db query")
+  })
+
+  t.Run("scan_error", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow(nil)
+    mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
+
+    _, err := service.GetNames()
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "rows scanning")
+  })
+
+  t.Run("rows_err_after_loop", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errors.New("post-iteration error"))
+    mock.ExpectQuery("SELECT name FROM users").WillReturnRows(rows)
+
+    _, err := service.GetNames()
+    assert.Error(t, err)
+    assert.Contains(t, err.Error(), "rows error")
+  })
 }
 
-func TestDBService_GetNames(t *testing.T) {
-	dbConn, mock, _ := sqlmock.New()
-	defer dbConn.Close()
-	s := New(dbConn)
+func TestGetUniqueNames(t *testing.T) {
+  db, mock, err := sqlmock.New()
+  assert.NoError(t, err)
+  defer db.Close()
 
-	mock.ExpectQuery("SELECT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("Alice"))
-	_, _ = s.GetNames()
+  service := New(db)
 
-	mock.ExpectQuery("SELECT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}))
-	_, _ = s.GetNames()
+  t.Run("success", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow("UniqueName")
+    mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
 
-	mock.ExpectQuery("SELECT name FROM users").WillReturnError(errors.New("e"))
-	_, _ = s.GetNames()
+    names, err := service.GetUniqueNames()
+    assert.NoError(t, err)
+    assert.Equal(t, []string{"UniqueName"}, names)
+  })
 
-	mock.ExpectQuery("SELECT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow(nil))
-	_, _ = s.GetNames()
+  t.Run("query_error", func(t *testing.T) {
+    mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errors.New("db error"))
 
-	mock.ExpectQuery("SELECT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("A").RowError(0, errors.New("e")))
-	_, _ = s.GetNames()
-}
+    _, err := service.GetUniqueNames()
+    assert.Error(t, err)
+  })
 
-func TestDBService_GetUniqueNames(t *testing.T) {
-	dbConn, mock, _ := sqlmock.New()
-	defer dbConn.Close()
-	s := New(dbConn)
+  t.Run("scan_error", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow(nil)
+    mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
 
-	mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("Bob"))
-	_, _ = s.GetUniqueNames()
+    _, err := service.GetUniqueNames()
+    assert.Error(t, err)
+  })
 
-	mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}))
-	_, _ = s.GetUniqueNames()
+  t.Run("rows_err", func(t *testing.T) {
+    rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errors.New("err"))
+    mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
 
-	mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errors.New("e"))
-	_, _ = s.GetUniqueNames()
-
-	mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow(nil))
-	_, _ = s.GetUniqueNames()
-
-	mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("B").RowError(0, errors.New("e")))
-	_, _ = s.GetUniqueNames()
+    _, err := service.GetUniqueNames()
+    assert.Error(t, err)
+  })
 }
