@@ -1,56 +1,68 @@
-package wifi_test
+package wifi
 
 import (
 	"errors"
 	"net"
-	"reflect"
 	"testing"
 
 	"github.com/mdlayher/wifi"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWiFiCoverage(t *testing.T) {
-	hw, _ := net.ParseMAC("00:11:22:33:44:55")
-	testIface := &wifi.Interface{
-		Index:        1,
-		Name:         "wlan0",
-		HardwareAddr: hw,
-	}
+func TestGetAddresses(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockWiFi := new(MockWiFiHandle)
+		service := New(mockWiFi)
 
-	t.Run("Full_Coverage_Logic", func(t *testing.T) {
-		m := new(MockWiFi)
-		
-		vNew := reflect.ValueOf(wifi.New)
-		var service reflect.Value
-		if vNew.Type().NumIn() > 0 {
-			service = vNew.Call([]reflect.Value{reflect.ValueOf(m)})[0]
-		} else {
-			service = vNew.Call(nil)[0]
+		addr1, _ := net.ParseMAC("00:11:22:33:44:55")
+		interfaces := []*wifi.Interface{
+			{Name: "wlan0", HardwareAddr: addr1},
 		}
 
-		getAddrs := service.MethodByName("GetAddresses")
-		getNames := service.MethodByName("GetNames")
+		mockWiFi.On("Interfaces").Return(interfaces, nil)
 
-		m.On("Interfaces").Return([]*wifi.Interface{testIface}, nil).Twice()
-		if getAddrs.IsValid() {
-			getAddrs.Call(nil)
-		}
-		if getNames.IsValid() {
-			getNames.Call(nil)
+		addrs, err := service.GetAddresses()
+		assert.NoError(t, err)
+		assert.Len(t, addrs, 1)
+		assert.Equal(t, addr1, addrs[0])
+		mockWiFi.AssertExpectations(t)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		mockWiFi := new(MockWiFiHandle)
+		service := New(mockWiFi)
+
+		mockWiFi.On("Interfaces").Return(nil, errors.New("system error"))
+
+		_, err := service.GetAddresses()
+		assert.Error(t, err)
+	})
+}
+
+func TestGetNames(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockWiFi := new(MockWiFiHandle)
+		service := New(mockWiFi)
+
+		interfaces := []*wifi.Interface{
+			{Name: "wlan0"},
+			{Name: "wlan1"},
 		}
 
-		m.On("Interfaces").Return(nil, errors.New("system_err")).Twice()
-		if getAddrs.IsValid() {
-			getAddrs.Call(nil)
-		}
-		if getNames.IsValid() {
-			getNames.Call(nil)
-		}
-		
-		if service.Kind() == reflect.Struct && service.NumField() > 0 {
-			field := service.Field(0)
-			assert.True(t, field.IsValid())
-		}
+		mockWiFi.On("Interfaces").Return(interfaces, nil)
+
+		names, err := service.GetNames()
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"wlan0", "wlan1"}, names)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		mockWiFi := new(MockWiFiHandle)
+		service := New(mockWiFi)
+
+		mockWiFi.On("Interfaces").Return(nil, errors.New("fail"))
+
+		_, err := service.GetNames()
+		assert.Error(t, err)
 	})
 }
