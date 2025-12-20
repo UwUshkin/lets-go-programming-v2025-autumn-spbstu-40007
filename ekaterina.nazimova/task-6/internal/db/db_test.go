@@ -1,4 +1,4 @@
-package db //nolint:testpackage // Отключаем проверку пакета, чтобы видеть приватные поля для 100% покрытия
+package db 
 
 import (
 	"errors"
@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	errDb    = errors.New("db error")
-	errIter  = errors.New("post-iteration error")
-	errBasic = errors.New("err")
+	errDbQuery = errors.New("db error")
+	errScan    = errors.New("scan error")
+	errIter    = errors.New("post-iteration error")
 )
 
 func TestGetNames(t *testing.T) {
@@ -35,7 +35,7 @@ func TestGetNames(t *testing.T) {
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
-		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDb)
+		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDbQuery)
 
 		_, err := service.GetNames()
 		require.Error(t, err)
@@ -80,7 +80,7 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
-		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDb)
+		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDbQuery)
 
 		_, err := service.GetUniqueNames()
 		require.Error(t, err)
@@ -97,7 +97,7 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("rows_err", func(t *testing.T) {
 		t.Parallel()
-		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errBasic)
+		rows := sqlmock.NewRows([]string{"name"}).AddRow("Alice").RowError(0, errIter)
 		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnRows(rows)
 
 		_, err := service.GetUniqueNames()
