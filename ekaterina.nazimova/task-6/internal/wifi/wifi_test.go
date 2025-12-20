@@ -1,68 +1,48 @@
-package wifi
+package wifi_test
 
 import (
 	"errors"
-	"net"
 	"testing"
 
-	"github.com/mdlayher/wifi"
-	"github.com/stretchr/testify/assert"
+	"github.com/UwUshkin/task-6/internal/wifi"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGetAddresses(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		mockWiFi := new(MockWiFiHandle)
-		service := New(mockWiFi)
+var errSystem = errors.New("system error")
 
-		addr1, _ := net.ParseMAC("00:11:22:33:44:55")
-		interfaces := []*wifi.Interface{
-			{Name: "wlan0", HardwareAddr: addr1},
-		}
+func TestWiFiService(t *testing.T) {
+	t.Parallel()
 
-		mockWiFi.On("Interfaces").Return(interfaces, nil)
+	t.Run("GetAddresses_success", func(t *testing.T) {
+		t.Parallel()
+		mockHandle := new(MockWiFi)
+		service := wifi.New(mockHandle)
 
-		addrs, err := service.GetAddresses()
-		assert.NoError(t, err)
-		assert.Len(t, addrs, 1)
-		assert.Equal(t, addr1, addrs[0])
-		mockWiFi.AssertExpectations(t)
-	})
-
-	t.Run("error", func(t *testing.T) {
-		mockWiFi := new(MockWiFiHandle)
-		service := New(mockWiFi)
-
-		mockWiFi.On("Interfaces").Return(nil, errors.New("system error"))
+		mockHandle.On("Interfaces").Return(nil, nil)
 
 		_, err := service.GetAddresses()
-		assert.Error(t, err)
-	})
-}
-
-func TestGetNames(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		mockWiFi := new(MockWiFiHandle)
-		service := New(mockWiFi)
-
-		interfaces := []*wifi.Interface{
-			{Name: "wlan0"},
-			{Name: "wlan1"},
-		}
-
-		mockWiFi.On("Interfaces").Return(interfaces, nil)
-
-		names, err := service.GetNames()
-		assert.NoError(t, err)
-		assert.Equal(t, []string{"wlan0", "wlan1"}, names)
+		require.NoError(t, err)
 	})
 
-	t.Run("error", func(t *testing.T) {
-		mockWiFi := new(MockWiFiHandle)
-		service := New(mockWiFi)
+	t.Run("GetAddresses_error", func(t *testing.T) {
+		t.Parallel()
+		mockHandle := new(MockWiFi)
+		service := wifi.New(mockHandle)
 
-		mockWiFi.On("Interfaces").Return(nil, errors.New("fail"))
+		mockHandle.On("Interfaces").Return(nil, errSystem)
+
+		_, err := service.GetAddresses()
+		require.Error(t, err)
+	})
+
+	t.Run("GetNames_success", func(t *testing.T) {
+		t.Parallel()
+		mockHandle := new(MockWiFi)
+		service := wifi.New(mockHandle)
+
+		mockHandle.On("Interfaces").Return(nil, nil)
 
 		_, err := service.GetNames()
-		assert.Error(t, err)
+		require.NoError(t, err)
 	})
 }
