@@ -33,7 +33,6 @@ func TestWiFi(t *testing.T) {
 		mockWiFi.On("Interfaces").Return([]*mdlayher.Interface{testIface}, nil).Once()
 		mockWiFi.On("Interfaces").Return(nil, errWifiSys).Once()
 
-		
 		addresses, err := service.GetAddresses()
 		require.NoError(t, err)
 		require.NotNil(t, addresses)
