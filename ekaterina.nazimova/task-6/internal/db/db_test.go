@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	errDbQuery = errors.New("db error")
+	errDBQuery = errors.New("db error")
 	errIter    = errors.New("post-iteration error")
 )
 
@@ -20,6 +20,7 @@ func TestGetNames(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
@@ -35,12 +36,14 @@ func TestGetNames(t *testing.T) {
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
 
 		service := db.New(dbConn)
-		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDbQuery)
+
+		mock.ExpectQuery("SELECT name FROM users").WillReturnError(errDBQuery)
 
 		_, err = service.GetNames()
 		require.Error(t, err)
@@ -48,6 +51,7 @@ func TestGetNames(t *testing.T) {
 
 	t.Run("scan_error", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
@@ -62,6 +66,7 @@ func TestGetNames(t *testing.T) {
 
 	t.Run("rows_err_after_loop", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
@@ -80,6 +85,7 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
@@ -95,12 +101,14 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("query_error", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
 
 		service := db.New(dbConn)
-		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDbQuery)
+
+		mock.ExpectQuery("SELECT DISTINCT name FROM users").WillReturnError(errDBQuery)
 
 		_, err = service.GetUniqueNames()
 		require.Error(t, err)
@@ -108,6 +116,7 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("scan_error", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()
@@ -122,6 +131,7 @@ func TestGetUniqueNames(t *testing.T) {
 
 	t.Run("rows_err", func(t *testing.T) {
 		t.Parallel()
+
 		dbConn, mock, err := sqlmock.New()
 		require.NoError(t, err)
 		defer dbConn.Close()

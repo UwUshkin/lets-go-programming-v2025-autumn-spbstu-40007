@@ -14,6 +14,7 @@ var errWifiSys = errors.New("system error")
 
 func TestWiFi(t *testing.T) {
 	t.Parallel()
+
 	hw, _ := net.ParseMAC("00:11:22:33:44:55")
 	testIface := &mdlayher.Interface{
 		Index:        1,
@@ -23,8 +24,8 @@ func TestWiFi(t *testing.T) {
 
 	t.Run("FullCoverage", func(t *testing.T) {
 		t.Parallel()
+
 		mockWiFi := new(MockWiFiHandle)
-		
 		service := wifi.New(mockWiFi)
 
 		mockWiFi.On("Interfaces").Return([]*mdlayher.Interface{testIface}, nil).Once()
