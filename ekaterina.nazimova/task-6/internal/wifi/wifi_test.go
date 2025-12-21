@@ -29,21 +29,23 @@ func TestWiFi(t *testing.T) {
 		service := wifi.New(mockWiFi)
 
 		mockWiFi.On("Interfaces").Return([]*mdlayher.Interface{testIface}, nil).Once()
+		mockWiFi.On("Interfaces").Return(nil, errWifiSys).Once()
+		mockWiFi.On("Interfaces").Return([]*mdlayher.Interface{testIface}, nil).Once()
+		mockWiFi.On("Interfaces").Return(nil, errWifiSys).Once()
+
+		
 		addresses, err := service.GetAddresses()
 		require.NoError(t, err)
 		require.NotNil(t, addresses)
 
-		mockWiFi.On("Interfaces").Return(nil, errWifiSys).Once()
 		addresses, err = service.GetAddresses()
 		require.Error(t, err)
 		require.Nil(t, addresses)
 
-		mockWiFi.On("Interfaces").Return([]*mdlayher.Interface{testIface}, nil).Once()
 		names, err := service.GetNames()
 		require.NoError(t, err)
 		require.NotNil(t, names)
 
-		mockWiFi.On("Interfaces").Return(nil, errWifiSys).Once()
 		names, err = service.GetNames()
 		require.Error(t, err)
 		require.Nil(t, names)
