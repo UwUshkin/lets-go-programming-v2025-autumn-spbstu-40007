@@ -1,4 +1,4 @@
-package db 
+package db_test
 
 import (
 	"errors"
@@ -7,6 +7,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/UwUshkin/task-6/internal/db"
 )
 
 var (
@@ -21,7 +23,7 @@ func TestGetNames(t *testing.T) {
 	require.NoError(t, err)
 	defer dbConn.Close()
 
-	service := New(dbConn)
+	service := db.New(dbConn)
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
@@ -66,7 +68,7 @@ func TestGetUniqueNames(t *testing.T) {
 	require.NoError(t, err)
 	defer dbConn.Close()
 
-	service := New(dbConn)
+	service := db.New(dbConn)
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
