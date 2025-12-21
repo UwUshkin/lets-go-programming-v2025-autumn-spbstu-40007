@@ -5,8 +5,8 @@ import (
 	"net"
 	"testing"
 
-	mdlayher "github.com/mdlayher/wifi"
 	"github.com/UwUshkin/task-6/internal/wifi"
+	mdlayher "github.com/mdlayher/wifi"
 	"github.com/stretchr/testify/require"
 )
 
